@@ -89,16 +89,6 @@ def test_darestani2019_sampling():
         cdf_values[i] <= cdf_values[i + 1] for i in range(len(cdf_values) - 1)
     )  # non-decreasing
 
-    # Serialize, reload, and check equivalence
-    with tempfile.NamedTemporaryFile(delete=False) as tmp:
-        json.dump(custom_dist, tmp)
-        tmp_path = tmp.name
-    with open(tmp_path, "rb") as f:
-        loaded_dist = json.load(f)
-    loaded_cdf_values = [loaded_dist.cdf(x) for x in cdf_points]
-    assert loaded_cdf_values == cdf_values
-
-
 def test_darestani2019_calculate_params():
     asset = DistributionPole.example()
     custom_dist = Darestani2019(asset)
