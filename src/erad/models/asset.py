@@ -200,6 +200,7 @@ class AssetState(Component):
             peak_ground_acceleration=AccelerationProbability.example(),
         )
 
+
 class Asset(Component):
     distribution_asset: UUID = Field(..., description="UUID of the distribution asset")
     connections: list[UUID] = Field([], description="List of UUIDs of connected assets")
@@ -300,14 +301,22 @@ class Asset(Component):
             asset_state=[AssetState.example()],
         )
 
+
 class DistributionPole(Asset):
-    pole_class: PoleClass | None = Field(description="Class of the pole (only for distribution poles)")
-    pole_material: PoleConstructionMaterial | None = Field(description="Construction material of the pole (only for distribution poles)")
-    wind_angle: WindAngle | None = Field(description="Angle between wind direction and pole") # Hazard property?
+    pole_class: PoleClass | None = Field(
+        description="Class of the pole (only for distribution poles)"
+    )
+    pole_material: PoleConstructionMaterial | None = Field(
+        description="Construction material of the pole (only for distribution poles)"
+    )
+    wind_angle: WindAngle | None = Field(
+        description="Angle between wind direction and pole"
+    )  # Hazard property?
     conductor_area: ConductorArea | None = Field(description="Conductor area in m^2")
     pole_age: PoleAge | None = Field(description="Age of the pole in years")
     probability_dist: Literal[*CUSTOM_DISTRIBUTIONS] | None = Field(
-        description="Custom distribution function to model pole failure probability. Run list_custom_distributions() for available options.")
+        description="Custom distribution function to model pole failure probability. Run list_custom_distributions() for available options."
+    )
 
     @field_validator("asset_type")
     @classmethod
@@ -321,8 +330,8 @@ class DistributionPole(Asset):
             custom_dist_instance = CUSTOM_DISTRIBUTIONS[self.probability_dist](self)
             prob_builder = ProbabilityFunctionBuilder(
                 dist=self.probability_dist,
-                params=[Speed(0, 'm/s')],  # Only to set output type
-                custom_dist_instance=custom_dist_instance
+                params=[Speed(0, "m/s")],  # Only to set output type
+                custom_dist_instance=custom_dist_instance,
             )
             wrapper = SimpleNamespace()
             wrapper.prob_model = prob_builder

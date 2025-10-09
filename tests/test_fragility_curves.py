@@ -22,6 +22,7 @@ def test_valid_hazard_fragility_model():
         ],
     )
 
+
 def test_invalid_hazard_fragility_model():
     with pytest.raises(ValidationError):
         HazardFragilityCurves(
@@ -51,6 +52,7 @@ def test_default_hazard_curves(hazard_curve_set: HazardFragilityCurves):
 def test_valid_fragility_curve():
     (ProbabilityFunction(distribution="lognorm", parameters=[Speed(35, "cm/s"), 0.5]),)
 
+
 def test_invalid_fragility_curve():
     with pytest.raises(ValidationError):
         (ProbabilityFunction(distribution="not_valid_dist", parameters=[Speed(35, "cm/s"), 0.5]),)
@@ -64,6 +66,7 @@ def test_invalid_fragility_curve():
                 distribution="lognorm", parameters=[Speed(35, "cm/s"), Speed(35, "m/s")]
             ),
         )
+
 
 def test_valid_probability_func_use():
     prob_data_model = ProbabilityFunction(
@@ -83,6 +86,3 @@ def test_invalid_probability_func_use():
         )
         prob_model = prob_data_model.prob_model
         prob_model.probability(45)
-
-
-

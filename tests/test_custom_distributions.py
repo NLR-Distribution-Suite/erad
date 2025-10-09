@@ -1,39 +1,53 @@
 import pytest
-import numpy as np
-from erad.models.custom_distributions import Darestani2019, CUSTOM_DISTRIBUTIONS, list_custom_distributions
+from erad.models.custom_distributions import (
+    Darestani2019,
+    CUSTOM_DISTRIBUTIONS,
+    list_custom_distributions,
+)
 from erad.models.asset import DistributionPole
 from erad.enums import PoleConstructionMaterial, PoleClass
 import re
 import tempfile
-import pickle
+import json
 
-@pytest.mark.parametrize("distribution_name,distribution_class", [
-    ("Darestani2019", Darestani2019),
-])
+
+@pytest.mark.parametrize(
+    "distribution_name,distribution_class",
+    [
+        ("Darestani2019", Darestani2019),
+    ],
+)
 def test_custom_distributions_registry(distribution_name, distribution_class):
     assert distribution_name in CUSTOM_DISTRIBUTIONS
     assert CUSTOM_DISTRIBUTIONS[distribution_name] is distribution_class
+
 
 @pytest.mark.parametrize("distribution_name", ["Darestani2019"])
 def test_list_custom_distributions(distribution_name):
     available_custom_distributions = list_custom_distributions()
     assert distribution_name in available_custom_distributions
     assert isinstance(available_custom_distributions, list)
-    assert len(available_custom_distributions) > 0, "Should have at least one custom distribution listed"
-    assert all(isinstance(name, str) for name in available_custom_distributions), "All names should be strings"
+    assert (
+        len(available_custom_distributions) > 0
+    ), "Should have at least one custom distribution listed"
+    assert all(
+        isinstance(name, str) for name in available_custom_distributions
+    ), "All names should be strings"
+
 
 @pytest.mark.parametrize(
     "attr,value,err_msg",
     [
         ("wind_angle", None, "wind_angle must be provided for Darestani2019 distribution"),
         ("pole_age", None, "pole_age must be provided for Darestani2019 distribution"),
-    ]
+    ],
 )
 def test_darestani2019_invalid_single_parameter(attr, value, err_msg):
     asset = DistributionPole.example()
     setattr(asset, attr, value)
     with pytest.raises(ValueError, match=err_msg):
         Darestani2019(asset)
+
 
 def test_darestani2019_invalid_material_and_class():
     asset = DistributionPole.example()
@@ -42,19 +56,21 @@ def test_darestani2019_invalid_material_and_class():
     with pytest.raises(ValueError, match="No coefficients found"):
         Darestani2019(asset)
 
+
 @pytest.mark.parametrize(
     "attr,value,err_msg",
     [
         ("wind_angle", -10, "Wind angle out of range [0, 90]"),
         ("conductor_area", 10, "Conductor area out of range [0, 8]"),
         ("pole_age", 150, "Pole age out of range [0, 100]"),
-    ]
+    ],
 )
 def test_invalid_range_parameters(attr, value, err_msg):
     asset = DistributionPole.example()
     setattr(asset, attr, value)
     with pytest.raises(ValueError, match=re.escape(err_msg)):
         Darestani2019(asset)
+
 
 def test_darestani2019_sampling():
     asset = DistributionPole.example()
@@ -69,16 +85,19 @@ def test_darestani2019_sampling():
     assert cdf_values[0] == 0
     assert cdf_values[4] == 1
     assert all(0 <= cdf <= 1 for cdf in cdf_values)
-    assert all(cdf_values[i] <= cdf_values[i+1] for i in range(len(cdf_values)-1)) # non-decreasing
+    assert all(
+        cdf_values[i] <= cdf_values[i + 1] for i in range(len(cdf_values) - 1)
+    )  # non-decreasing
 
     # Serialize, reload, and check equivalence
     with tempfile.NamedTemporaryFile(delete=False) as tmp:
-        pickle.dump(custom_dist, tmp)
+        json.dump(custom_dist, tmp)
         tmp_path = tmp.name
-    with open(tmp_path, 'rb') as f:
-        loaded_dist = pickle.load(f)
+    with open(tmp_path, "rb") as f:
+        loaded_dist = json.load(f)
     loaded_cdf_values = [loaded_dist.cdf(x) for x in cdf_points]
     assert loaded_cdf_values == cdf_values
+
 
 def test_darestani2019_calculate_params():
     asset = DistributionPole.example()
@@ -95,4 +114,4 @@ def test_darestani2019_calculate_params():
     assert isinstance(mu2, float)
     assert isinstance(sigma2, float)
     assert sigma2 > 0
-    assert (mu, sigma) != (mu2, sigma2)  
+    assert (mu, sigma) != (mu2, sigma2)

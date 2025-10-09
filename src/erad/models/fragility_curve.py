@@ -22,12 +22,11 @@ SUPPORTED_CONT_DIST = [name for name in dir(_continuous_distns) if not name.star
 
 
 class ProbabilityFunction(Component):
-    name: str = ''
+    name: str = ""
     distribution: str
     parameters: list[float | BaseQuantity]
 
-
-    @field_validator('distribution')
+    @field_validator("distribution")
     def validate_distribution(cls, value):
         if isinstance(value, str):
             if value not in SUPPORTED_CONT_DIST and value not in CUSTOM_DISTRIBUTIONS:
@@ -39,7 +38,7 @@ class ProbabilityFunction(Component):
         if not any(isinstance(v, BaseQuantity) for v in value):
             raise ValueError("There should be atleast one BaseQuantity in the parameters")
 
-        distribution = info.data.get('distribution')
+        distribution = info.data.get("distribution")
         if distribution in SUPPORTED_CONT_DIST:
             units = set([v.units for v in value if isinstance(v, BaseQuantity)])
             if len(units) > 1:
@@ -55,8 +54,9 @@ class ProbabilityFunction(Component):
         """Example for a scipy distribution."""
         return ProbabilityFunction(
             distribution="norm",
-            parameters=[Speed(1.5, 'm/s'), 2],
+            parameters=[Speed(1.5, "m/s"), 2],
         )
+
 
 class FragilityCurve(Component):
     name: str = ""
@@ -70,6 +70,7 @@ class FragilityCurve(Component):
             asset_type=AssetTypes.substation,
             prob_function=ProbabilityFunction.example(),
         )
+
 
 class HazardFragilityCurves(Component):
     name: str = "DEFAULT_CURVES"

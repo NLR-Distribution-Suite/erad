@@ -1,5 +1,6 @@
 from enum import IntEnum, StrEnum
 
+
 class ScenarioTypes(IntEnum):
     flood_m = 0
     wind_m_per_s = 1
@@ -38,6 +39,7 @@ class AssetTypes(IntEnum):
     def has_asset(cls, asset):
         return asset in cls.__members__
 
+
 class PoleClass(StrEnum):
     CLASS_1 = "Class 1"
     CLASS_2 = "Class 2"
@@ -47,9 +49,7 @@ class PoleClass(StrEnum):
     CLASS_6 = "Class 6"
     CLASS_7 = "Class 7"
 
+
 class PoleConstructionMaterial(StrEnum):
     WOOD = "wood" or "Wood" or "WOOD"
     STEEL = "steel" or "Steel" or "STEEL"
-
-
-

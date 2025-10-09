@@ -1,10 +1,11 @@
 from infrasys import BaseQuantity
 import scipy.stats as stats
 
+
 class ProbabilityFunctionBuilder:
     """Class containing utility fuctions for scenario definations."""
 
-    def __init__(self, dist: str, params: list[float | BaseQuantity],custom_dist_instance=None):
+    def __init__(self, dist: str, params: list[float | BaseQuantity], custom_dist_instance=None):
         """Constructor for BaseScenario class.
 
         Args:
@@ -20,9 +21,9 @@ class ProbabilityFunctionBuilder:
 
         if hasattr(stats, dist):
             dist_class = getattr(stats, dist)
-            self.dist = dist_class(*self.params) # Create a frozen scipy distribution instance
+            self.dist = dist_class(*self.params)  # Create a frozen scipy distribution instance
         elif custom_dist_instance:
-            self.dist = custom_dist_instance # Use the provided custom distribution instance
+            self.dist = custom_dist_instance  # Use the provided custom distribution instance
         else:
             raise ValueError(f"Unsupported distribution: {dist}.")
 
