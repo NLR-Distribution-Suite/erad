@@ -12,6 +12,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
+      - name: Remove any Node-based jupyter-book
+        run: |
+          if command -v jupyter-book &> /dev/null; then
+            echo "Existing jupyter-book found at $(which jupyter-book)"
+            head -5 $(which jupyter-book)
+            sudo rm -f $(which jupyter-book)
+          fi
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
