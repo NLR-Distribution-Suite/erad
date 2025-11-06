@@ -12,35 +12,39 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Remove any Node-based jupyter-book
+      #Replace your current build section with this exact sequence:
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      
+      # --- wipe out any Node jupyter-book that shadows the Python one
+      - name: Remove Node version
         run: |
           if command -v jupyter-book &> /dev/null; then
-            echo "Existing jupyter-book found at $(which jupyter-book)"
-            head -5 $(which jupyter-book)
+            echo "Removing existing jupyter-book at $(which jupyter-book)"
             sudo rm -f $(which jupyter-book)
           fi
+          npm uninstall -g jupyter-book || true
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.12'
-
-      - name: Install Jupyter Book
+      # --- install the real Python package
+      - name: Install Jupyter Book (Python)
         run: |
           pip install --upgrade pip
           pip install jupyter-book
-
-      - name: Verify correct executable
-        run: |
-          which jupyter-book
-          jupyter-book --version
-          python -m jupyter_book --version
-      
+            
       - name: Install system dependencies (Graphviz)
         run:  |
           sudo apt-get update
           sudo apt-get install -y graphviz graphviz-dev
           
+      - name: Verify correct Jupyter Book
+        run: |
+          which jupyter-book
+          head -5 $(which jupyter-book)
+          jupyter-book --version
+          python -m jupyter_book --version
+      
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -48,12 +52,10 @@ jobs:
           python -m pip install ".[doc,dev]"
           pip install ghp-import matplotlib gdmloader
 
-      - name: Clean old builds
-        run: rm -rf docs/_build
-      
-      - name: Build Jupyter Book
-        run: jupyter-book build docs/
-
-      - name: Deploy to GitHub Pages
+      - name: Clean and build docs
         run: |
-          ghp-import -n -p -f docs/_build/html
+          rm -rf docs/_build
+          python -m jupyter_book build docs/
+            - name: Deploy to GitHub Pages
+              run: |
+                ghp-import -n -p -f docs/_build/html
