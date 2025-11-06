@@ -28,7 +28,7 @@ jobs:
           pip install jupyter-book ghp-import matplotlib gdmloader
 
       - name: Build the book
-        run: jupyter-book build docs/
+        run: jupyter-book build docs/ --builder html
 
       - name: Deploy to GitHub Pages
         run: |
