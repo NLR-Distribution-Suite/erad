@@ -1,6 +1,9 @@
 """Tests for ERAD MCP Server."""
 
 import json
+import tempfile
+from pathlib import Path
+
 import pytest
 from datetime import datetime
 from unittest.mock import Mock, patch
@@ -38,12 +41,13 @@ def sample_hazard_models():
 @pytest.fixture
 def mock_cache_models():
     """Mock cached models."""
+    temp_dir = Path(tempfile.gettempdir())
     return {
         "test_model": {
             "name": "test_model",
             "description": "Test model",
             "created_at": datetime.now().isoformat(),
-            "file_path": "/tmp/test_model.json",  # noqa: B108
+            "file_path": str(temp_dir / "test_model.json"),
         }
     }
 
@@ -388,13 +392,14 @@ class TestMCPIntegration:
         from erad.mcp import call_tool
 
         # Setup mocks for distribution model
+        temp_dir = Path(tempfile.gettempdir())
         mock_load_models.return_value = {
-            "test_model": {"name": "test_model", "file_path": "/tmp/test.json"}  # noqa: B108
+            "test_model": {"name": "test_model", "file_path": str(temp_dir / "test.json")}
         }
 
         # Setup mocks for hazard model
         mock_load_hazard_models.return_value = {
-            "test_hazard": {"name": "test_hazard", "file_path": "/tmp/hazard.json"}  # noqa: B108
+            "test_hazard": {"name": "test_hazard", "file_path": str(temp_dir / "hazard.json")}
         }
 
         mock_dist_system = Mock()
