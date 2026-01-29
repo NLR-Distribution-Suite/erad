@@ -126,7 +126,7 @@ def load_cached_models() -> dict[str, dict]:
                     "created_at": datetime.fromtimestamp(stats.st_ctime).isoformat(),
                     "file_path": str(file_path),
                 }
-            except Exception:
+            except Exception:  # noqa: B112
                 continue
 
     return models
@@ -150,7 +150,7 @@ def load_cached_hazard_models() -> dict[str, dict]:
                             "created_at": info.get("created_at"),
                             "file_path": str(file_path),
                         }
-        except Exception:
+        except Exception:  # noqa: B110
             pass
 
     # Also scan directory for files not in metadata
@@ -181,7 +181,7 @@ def load_cached_hazard_models() -> dict[str, dict]:
                     "created_at": datetime.fromtimestamp(stats.st_ctime).isoformat(),
                     "file_path": str(file_path),
                 }
-            except Exception:
+            except Exception:  # noqa: B112
                 continue
 
     return models

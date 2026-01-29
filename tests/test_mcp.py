@@ -43,7 +43,7 @@ def mock_cache_models():
             "name": "test_model",
             "description": "Test model",
             "created_at": datetime.now().isoformat(),
-            "file_path": "/tmp/test_model.json",
+            "file_path": "/tmp/test_model.json",  # noqa: B108
         }
     }
 
@@ -389,12 +389,12 @@ class TestMCPIntegration:
 
         # Setup mocks for distribution model
         mock_load_models.return_value = {
-            "test_model": {"name": "test_model", "file_path": "/tmp/test.json"}
+            "test_model": {"name": "test_model", "file_path": "/tmp/test.json"}  # noqa: B108
         }
 
         # Setup mocks for hazard model
         mock_load_hazard_models.return_value = {
-            "test_hazard": {"name": "test_hazard", "file_path": "/tmp/hazard.json"}
+            "test_hazard": {"name": "test_hazard", "file_path": "/tmp/hazard.json"}  # noqa: B108
         }
 
         mock_dist_system = Mock()

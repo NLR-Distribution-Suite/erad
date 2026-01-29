@@ -1017,7 +1017,7 @@ def cache_refresh():
 
 @server_app.command("start")
 def server_start(
-    host: str = typer.Option("0.0.0.0", "--host", "-h", help="Host to bind to"),
+    host: str = typer.Option("0.0.0.0", "--host", "-h", help="Host to bind to"),  # noqa: B104
     port: int = typer.Option(8000, "--port", "-p", help="Port to bind to"),
     reload: bool = typer.Option(False, "--reload", "-r", help="Enable auto-reload"),
     workers: int = typer.Option(1, "--workers", "-w", help="Number of workers"),
@@ -1033,7 +1033,7 @@ def server_start(
     console.print(f"\n  API docs: http://{host if host != '0.0.0.0' else 'localhost'}:{port}/docs")
     console.print()
 
-    uvicorn.run(
+    uvicorn.run(  # noqa: B104
         "erad.api:app",
         host=host,
         port=port,

@@ -210,20 +210,20 @@ def test_run_simulation_error(
 # ========== Scenario Generation Tests ==========
 
 
-# TODO: Update these tests for new cache-based generate_scenarios with ZIP response
+# FIXME: Update these tests for new cache-based generate_scenarios with ZIP response
 # @patch('erad.api.simulation._load_distribution_system')
 # @patch('erad.api.simulation.AssetSystem.from_gdm')
 # @patch('erad.api.simulation._create_hazard_system')
 # @patch('erad.api.simulation.HazardScenarioGenerator')
 def test_generate_scenarios_success():
-    """Test successful scenario generation - TODO: Update for cache-based approach."""
+    """Test successful scenario generation - needs rewrite for cache-based approach."""
     pass
     # Test commented out - needs rewrite for cache-based approach with ZIP response
 
 
-# TODO: Update these tests for new cache-based generate_scenarios
+# FIXME: Update these tests for new cache-based generate_scenarios
 def test_generate_scenarios_with_system_name():
-    """Test scenario generation with cached models - TODO: Update."""
+    """Test scenario generation with cached models - needs update."""
     pass
     # Test commented out - needs rewrite for cache-based approach
 

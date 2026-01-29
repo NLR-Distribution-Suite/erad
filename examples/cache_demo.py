@@ -71,7 +71,7 @@ def demo_upload_model():
     }
 
     # Save to temp file
-    temp_file = Path("/tmp/demo_system.json")
+    temp_file = Path("/tmp/demo_system.json")  # noqa: B108
     with open(temp_file, "w") as f:
         json.dump(sample_data, f, indent=2)
 

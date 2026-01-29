@@ -67,7 +67,7 @@ def create_sample_distribution_system():
 def upload_distribution_system(name, system_data, description=None):
     """Upload a distribution system model."""
     # Save to temporary file
-    temp_file = Path(f"/tmp/{name}.json")
+    temp_file = Path(f"/tmp/{name}.json")  # noqa: B108
     with open(temp_file, "w") as f:
         json.dump(system_data, f, indent=2)
 
