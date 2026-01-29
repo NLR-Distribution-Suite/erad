@@ -8,7 +8,7 @@ from typer.testing import CliRunner
 from erad.cli import app
 
 
-runner = CliRunner()
+runner = CliRunner(mix_stderr=False, env={"NO_COLOR": "1"})
 
 
 # ========== Fixtures ==========
