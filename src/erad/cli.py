@@ -1019,39 +1019,15 @@ def cache_refresh():
 # ========== Server Sub-commands ==========
 
 
-@server_app.command("start")
-def server_start(
-    host: str = typer.Option("127.0.0.1", "--host", "-h", help="Host to bind to"),
-    port: int = typer.Option(8000, "--port", "-p", help="Port to bind to"),
-    reload: bool = typer.Option(False, "--reload", "-r", help="Enable auto-reload"),
-    workers: int = typer.Option(1, "--workers", "-w", help="Number of workers"),
-):
-    """Start the ERAD REST API server."""
-    import uvicorn
-
-    console.print("[bold blue]Starting ERAD API server...[/bold blue]")
-    console.print(f"  Host: {host}")
-    console.print(f"  Port: {port}")
-    console.print(f"  Workers: {workers}")
-    console.print(f"  Reload: {reload}")
-    console.print(
-        f"\n  API docs: http://{host if host != '127.0.0.1' else 'localhost'}:{port}/docs"
-    )
-    console.print()
-
-    uvicorn.run(  # noqa: B104
-        "erad.api:app",
-        host=host,
-        port=port,
-        reload=reload,
-        workers=workers if not reload else 1,
-    )
-
-
 @server_app.command("mcp")
 def server_mcp():
-    """Start the ERAD MCP server."""
+    """Start the ERAD MCP server for Model Context Protocol integration."""
     console.print("[bold blue]Starting ERAD MCP server...[/bold blue]")
+    console.print("  Protocol: Model Context Protocol (MCP)")
+    console.print("  Transport: stdio")
+    console.print()
+    console.print("[dim]Use with Claude Desktop, VS Code Copilot, or other MCP clients[/dim]")
+    console.print()
 
     from erad.mcp import main as mcp_main
 

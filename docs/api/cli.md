@@ -473,6 +473,5 @@ done
 
 ## See Also
 
-- [REST API Documentation](rest_api.md)
-- [MCP Server Documentation](mcp_server.md)
+- [MCP Server Documentation](mcp_server.md) - Model Context Protocol server for AI assistants
 - [Data Models](data_models.md)

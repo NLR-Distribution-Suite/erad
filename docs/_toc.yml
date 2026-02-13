@@ -28,7 +28,6 @@ parts:
   - caption: Interface Guides
     chapters:
     - file: api/cli
-    - file: api/rest_api
     - file: api/mcp_server
   - caption: Community Contributions
     chapters:
