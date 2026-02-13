@@ -1,421 +1,631 @@
-# MCP Server
+# ERAD MCP Server
 
-A Model Context Protocol (MCP) server for integrating ERAD hazard simulation capabilities with AI assistants like Claude, GitHub Copilot, and other MCP-compatible clients.
+The ERAD MCP (Model Context Protocol) Server provides a powerful interface for running hazard simulations, querying assets, exploring historic hazards, and analyzing distribution system resilience through AI assistants like Claude Desktop and GitHub Copilot.
 
 ## Overview
 
-The ERAD MCP server exposes distribution system models and hazard models through the standardized MCP protocol, enabling AI assistants to:
+The MCP server exposes ~25 tools organized into functional categories:
 
-- Access cached distribution system models and hazard models as resources
-- Run hazard simulations using cached models
-- Generate Monte Carlo scenarios for risk analysis
-- Query hazard type information and cache status
-- Manage distribution and hazard model caches
+- **Simulation**: Load models, run hazard simulations, generate Monte Carlo scenarios
+- **Asset Analysis**: Query assets, get statistics, explore network topology
+- **Historic Hazards**: Load earthquakes, hurricanes, and wildfires from database
+- **Fragility Curves**: Query default curves and parameters
+- **Export**: Save results to SQLite, JSON, GeoJSON
+- **Cache Management**: List and manage cached models
+- **Documentation**: Search ERAD docs and examples
+- **Utilities**: List asset types, manage loaded systems
+
+The server is built with a **modular architecture** for easy maintenance and extensibility. Each tool category is implemented in its own Python module, making it straightforward to add new capabilities or customize existing ones.
+
+## Architecture & Workflow
+
+```{mermaid}
+graph TB
+    Start([AI Assistant Request]) --> MCP[MCP Server<br/>stdio transport]
+    
+    MCP --> Tools{Tool Categories}
+    
+    Tools --> Sim[Simulation Tools<br/>5 tools]
+    Tools --> Asset[Asset Tools<br/>4 tools]
+    Tools --> Hazard[Hazard Tools<br/>6 tools]
+    Tools --> Frag[Fragility Tools<br/>2 tools]
+    Tools --> Export[Export Tools<br/>3 tools]
+    Tools --> Cache[Cache Tools<br/>2 tools]
+    Tools --> Util[Utility Tools<br/>4 tools]
+    
+    subgraph Workflow["Typical Simulation Workflow"]
+        direction TB
+        W1[1. Load Distribution Model<br/>load_gridlabd_model_tool]
+        W2[2. Create Hazard System<br/>create_hazard_system_tool]
+        W3[3. Load Historic Hazard<br/>load_historic_*_tool]
+        W4[4. Run Simulation<br/>run_hazard_simulation_tool]
+        W5[5. Query Results<br/>query_assets_tool]
+        W6[6. Generate Scenarios<br/>generate_scenarios_tool]
+        W7[7. Export Results<br/>export_to_sqlite_tool]
+        
+        W1 --> W2
+        W2 --> W3
+        W3 --> W4
+        W4 --> W5
+        W5 --> W6
+        W6 --> W7
+    end
+    
+    Sim -.->|implements| Workflow
+    Hazard -.->|provides| W3
+    Export -.->|outputs| W7
+    Asset -.->|queries| W5
+    
+    subgraph State["Server State Management"]
+        AS[(Asset Systems)]
+        HS[(Hazard Systems)]
+        SR[(Simulation Results)]
+        CM[(Cached Models)]
+    end
+    
+    Workflow --> State
+    Cache --> CM
+    
+    subgraph HazardTypes["Supported Hazard Types"]
+        H1[Hurricanes<br/>141 timesteps]
+        H2[Earthquakes<br/>single event]
+        H3[Wildfires<br/>with sub-areas]
+    end
+    
+    Hazard --> HazardTypes
+    
+    W7 --> Output[(SQLite Database<br/>Results & Analysis)]
+    
+    Frag -.->|damage curves| W4
+    
+    style MCP fill:#4a90e2,stroke:#2e5c8a,color:#fff
+    style Workflow fill:#e8f4f8,stroke:#4a90e2
+    style State fill:#fff3cd,stroke:#ffc107
+    style HazardTypes fill:#d4edda,stroke:#28a745
+    style Output fill:#f8d7da,stroke:#dc3545
+```
+
+The diagram above illustrates the complete MCP server architecture and a typical simulation workflow. The server organizes 26 tools into 7 functional categories, maintains stateful storage for systems and results, and supports all three major hazard types (hurricanes, earthquakes, wildfires).
 
 ## Installation
 
-Install ERAD with MCP support:
+The MCP server is included with ERAD. Install with MCP support:
 
 ```bash
-pip install -e ".[dev]"
+pip install NREL-erad[mcp]
 ```
 
-Or install just the MCP dependency:
+Or install the base package first and add MCP later:
 
 ```bash
-pip install mcp>=1.0.0
+pip install NREL-erad
+pip install NREL-erad[mcp]
 ```
 
-## Running the Server
+## Quick Start
 
-### Using the Entry Point
+### Start the Server
 
 ```bash
+# Direct invocation
+erad server mcp
+
+# Or via Python module (uses the modular erad.mcp package)
+python -m erad.mcp
+
+# Or using the dedicated command
 erad-mcp
 ```
 
-### Using Python Module
+### Configure in VS Code
 
-```bash
-python -m erad.mcp
+Add to your `.vscode/settings.json`:
+
+```json
+{
+  "github.copilot.chat.mcp": {
+    "servers": {
+      "erad": {
+        "command": "erad-mcp",
+        "args": []
+      }
+    }
+  }
+}
 ```
 
-## VS Code Integration
+### Configure in Claude Desktop
 
-### Configuration
-
-Add the following to your `.vscode/mcp.json` file:
+Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS):
 
 ```json
 {
   "mcpServers": {
     "erad": {
-      "command": "python",
-      "args": ["-m", "erad.mcp"]
+      "command": "erad-mcp",
+      "args": []
     }
   }
 }
 ```
 
-Or if using a conda environment:
+## Core Concepts
 
-```json
-{
-  "mcpServers": {
-    "erad": {
-      "command": "conda",
-      "args": ["run", "-n", "erad", "python", "-m", "erad.mcp"]
-    }
-  }
-}
+### Stateful Architecture
+
+The MCP server maintains state in memory:
+- **Asset Systems**: Loaded distribution models with unique IDs
+- **Hazard Systems**: Loaded hazard models with unique IDs  
+- **Simulation Results**: Completed simulations with result IDs
+
+This enables workflows like:
+1. Load asset system → get ID
+2. Create hazard system → get ID
+3. Add historic hurricane to hazard system
+4. Run simulation with both IDs → get result ID
+5. Query assets from asset system ID
+6. Generate scenarios from result ID
+7. Export tracked changes
+
+### System IDs
+
+Most operations return a system ID (8-character string) that you use in subsequent operations:
+
 ```
-
-## Resources
-
-The MCP server exposes the following resources:
-
-### Cache Info
-**URI:** `erad://cache/info`
-
-Returns information about the cache directory and stored models.
-
-```json
-{
-  "cache_directory": "/home/user/.cache/erad/distribution_models",
-  "metadata_file": "/home/user/.cache/erad/distribution_models/models_metadata.json",
-  "total_models": 3
-}
-```
-
-### Hazard Types
-**URI:** `erad://hazards/types`
-
-Returns supported hazard types and descriptions.
-
-```json
-{
-  "hazard_types": [
-    "earthquake",
-    "flood",
-    "flood_area",
-    "wind",
-    "fire",
-    "fire_area"
-  ],
-  "descriptions": {
-    "earthquake": "Earthquake Model (EarthQuakeModel)",
-    "flood": "Flood Model (FloodModel)",
-    "flood_area": "Flood Area Model (FloodModelArea)",
-    "wind": "Wind Model (WindModel)",
-    "fire": "Fire Model (FireModel)",
-    "fire_area": "Fire Area Model (FireModelArea)"
-  }
-}
-```
-
-### Model Data
-**URI:** `erad://models/{model_name}`
-
-Returns the full JSON data for a specific distribution system model.
-
-### Model Summary
-**URI:** `erad://models/{model_name}/summary`
-
-Returns a summary of a distribution system model including component counts.
-
-### Hazard Model Data
-**URI:** `erad://hazards/{model_name}`
-
-Returns the full JSON data for a specific hazard system model.
-
-### Hazard Model Summary
-**URI:** `erad://hazards/{model_name}/summary`
-
-Returns a summary of a hazard system model including hazard counts and timestamps.
-
-## Tools
-
-The MCP server provides the following tools:
-
-### run_simulation
-
-Run a hazard simulation using cached distribution and hazard system models.
-
-**Parameters:**
-- `distribution_system_name` (string, required): Name of the cached distribution system model
-- `hazard_system_name` (string, required): Name of the cached hazard system model
-- `curve_set` (string, optional): Fragility curve set to use (default: "DEFAULT_CURVES")
-
-**Example:**
-```json
-{
-  "distribution_system_name": "my_system",
-  "hazard_system_name": "earthquake_scenario",
-  "curve_set": "DEFAULT_CURVES"
-}
-```
-
-**Response:**
-```json
-{
-  "status": "success",
-  "message": "Simulation completed successfully",
-  "distribution_system_name": "my_system",
-  "hazard_system_name": "earthquake_scenario",
-  "asset_count": 10,
-  "hazard_count": 3,
-  "timestamps": ["2024-01-01T00:00:00"],
-  "curve_set": "DEFAULT_CURVES"
-}
-```
-
-### generate_scenarios
-
-Generate Monte Carlo scenarios using cached distribution and hazard system models.
-
-**Parameters:**
-- `distribution_system_name` (string, required): Name of the cached distribution system model
-- `hazard_system_name` (string, required): Name of the cached hazard system model
-- `number_of_samples` (integer, optional): Number of scenarios to generate (default: 1)
-- `seed` (integer, optional): Random seed for reproducibility
-- `curve_set` (string, optional): Fragility curve set to use (default: "DEFAULT_CURVES")
-
-**Example:**
-```json
-{
-  "distribution_system_name": "my_system",
-  "hazard_system_name": "earthquake_scenario",
-  "number_of_samples": 100,
-  "seed": 42,
-  "curve_set": "DEFAULT_CURVES"
-}
-```
-
-**Response:**
-```json
-{
-  "status": "success",
-  "message": "Scenarios generated successfully",
-  "distribution_system_name": "my_system",
-  "hazard_system_name": "earthquake_scenario",
-  "number_of_samples": 100,
-  "seed": 42,
-  "total_scenarios": 100,
-  "scenarios": [
-    {
-      "scenario_name": "sample_0",
-      "timestamp": "2024-01-01T00:00:00",
-      "edits": [
-        {
-          "component_uuid": "asset_1_uuid",
-          "name": "in_service",
-          "value": false
-        }
-      ]
-    }
-  ]
-}
-```
-
-### list_cached_models
-
-List all distribution system models available in the cache.
-
-**Parameters:** None
-
-**Returns:**
-```json
-{
-  "models": [
-    {
-      "name": "model1",
-      "description": "Test model",
-      "created_at": "2024-01-01T00:00:00",
-      "file_path": "/path/to/model.json"
-    }
-  ],
-  "total_count": 1
-}
-```
-
-### get_model_info
-
-Get detailed information about a specific cached model.
-
-**Parameters:**
-- `model_name` (string, required): Name of the model to retrieve info for
-
-### refresh_cache
-
-Refresh the model list from the cache directory.
-
-**Parameters:** None
-
-### get_cache_info
-
-Get information about the cache directory.
-
-**Parameters:** None
-
-**Returns:**
-```json
-{
-  "cache_directory": "/home/user/.cache/erad/distribution_models",
-  "metadata_file": "/home/user/.cache/erad/distribution_models/models_metadata.json",
-  "total_models": 3,
-  "total_files": 3,
-  "total_size_bytes": 1024000,
-  "total_size_mb": 1.0
-}
-```
-
-### list_cached_hazard_models
-
-List all hazard system models available in the cache.
-
-**Parameters:** None
-
-**Returns:**
-```json
-{
-  "total_models": 2,
-  "models": [
-    {
-      "name": "earthquake_scenario",
-      "description": "Earthquake hazard model",
-      "created_at": "2024-01-01T00:00:00"
-    },
-    {
-      "name": "flood_scenario",
-      "description": "Flood hazard model",
-      "created_at": "2024-01-02T00:00:00"
-    }
-  ]
-}
-```
-
-### get_hazard_model_info
-
-Get detailed information about a specific cached hazard model.
-
-**Parameters:**
-- `model_name` (string, required): Name of the hazard model to retrieve info for
-
-**Returns:**
-```json
-{
-  "name": "earthquake_scenario",
-  "description": "Earthquake hazard model",
-  "created_at": "2024-01-01T00:00:00",
-  "file_path": "/home/user/.cache/erad/hazard_models/earthquake_scenario.json",
-  "file_size_bytes": 2048,
-  "content_keys": ["models", "timestamps"],
-  "hazard_model_count": 3,
-  "timestamp_count": 1
-}
-```
-
-## Prompts
-
-The MCP server provides template prompts for common tasks:
-
-### simulate_hazard
-
-Generate a prompt for running a hazard simulation.
-
-**Arguments:**
-- `model_name` (string, required): Name of the distribution system model
-- `hazard_type` (string, required): Type of hazard (earthquake, flood, wind, fire, etc.)
-
-### analyze_vulnerability
-
-Generate a prompt for analyzing system vulnerability to hazards.
-
-**Arguments:**
-- `model_name` (string, required): Name of the distribution system model
-
-## Supported Hazard Types
-
-| Hazard Type | Description | Model Class |
-|------------|-------------|-------------|
-| `earthquake` | Earthquake hazard model | `EarthQuakeModel` |
-| `flood` | Flood hazard model | `FloodModel` |
-| `flood_area` | Flood area hazard model | `FloodModelArea` |
-| `wind` | Wind hazard model | `WindModel` |
-| `fire` | Fire hazard model | `FireModel` |
-| `fire_area` | Fire area hazard model | `FireModelArea` |
-
-## Cache Directory
-
-Models are stored in platform-specific cache directories:
-
-**Distribution Systems:**
-- **Linux/macOS:** `~/.cache/erad/distribution_models/`
-- **Windows:** `%LOCALAPPDATA%\erad\distribution_models\`
-
-**Hazard Models:**
-- **Linux/macOS:** `~/.cache/erad/hazard_models/`
-- **Windows:** `%LOCALAPPDATA%\erad\hazard_models\`
-
-Models uploaded via the REST API are automatically available to the MCP server.
-
-## Example Usage with AI Assistants
-
-Once configured, you can interact with the ERAD MCP server through your AI assistant:
-
-**Listing available models:**
-> "What distribution system models are available in ERAD?"
-
-> "List all cached hazard models"
-
-**Running a simulation:**
-> "Run an earthquake simulation using the 'test_system' distribution model and 'earthquake_scenario' hazard model"
-
-**Generating scenarios:**
-> "Generate 100 Monte Carlo scenarios using 'distribution_grid_1' and 'flood_scenario' with seed 42"
-
-**Getting hazard information:**
-> "What hazard types does ERAD support?"
-
-**Model information:**
-> "Get details about the 'earthquake_scenario' hazard model"
-
-## Testing
-
-Run the MCP server tests:
-
-```bash
-pytest tests/test_mcp.py -v
+load_distribution_model → asset_system_id: "a1b2c3d4"
+create_hazard_system → hazard_system_id: "e5f6g7h8"
+run_simulation(a1b2c3d4, e5f6g7h8) → simulation_id: "i9j0k1l2"
 ```
 
 ## Architecture
 
-The MCP server shares the same cache directories and model management functionality as the REST API, ensuring consistency between both interfaces:
+The MCP server is built with a modular architecture for maintainability and extensibility. The implementation is organized into focused modules:
+
+### Module Structure
 
 ```
-┌─────────────────┐     ┌─────────────────┐
-│   REST API      │     │   MCP Server    │
-│   (api.py)      │     │   (mcp.py)      │
-└────────┬────────┘     └────────┬────────┘
-         │                       │
-         └───────────┬───────────┘
-                     │
-         ┌───────────▼───────────┐
-         │   Cache Directory     │
-         │ ~/.cache/erad/        │
-         │ ├── distribution_     │
-         │ │   models/           │
-         │ └── hazard_models/    │
-         └───────────────────────┘
+src/erad/mcp/
+├── server.py          # Main MCP server, tool registration, request routing
+├── state.py           # ServerState class for in-memory system management
+├── helpers.py         # Shared utility functions (cache, serialization)
+├── simulation.py      # 5 simulation tools
+├── assets.py          # 4 asset query tools
+├── hazards.py         # 6 historic hazard tools
+├── fragility.py       # 2 fragility curve tools
+├── export.py          # 3 export tools
+├── cache.py           # 2 cache management tools
+├── documentation.py   # 1 documentation search tool
+├── utilities.py       # 3 utility tools
+└── resources.py       # MCP resource protocol handlers
 ```
 
-**Key Features:**
-- **Unified Cache:** Both REST API and MCP server use the same cache
-- **Model Persistence:** Models uploaded via REST API are accessible through MCP
-- **Cross-Interface Compatibility:** Changes in one interface are immediately available in the other
+### Key Components
+
+**server.py**: Main MCP server implementation with tool registration and request routing. Uses MCP's `@app.list_tools()`, `@app.call_tool()`, and `@app.read_resource()` decorators.
+
+**state.py**: Global `ServerState` singleton that maintains:
+- `asset_systems`: Dict of loaded distribution models
+- `hazard_systems`: Dict of loaded hazard models  
+- `simulation_results`: Dict of completed simulations
+- `hazard_simulators`: Dict of active simulators
+
+**Tool Modules**: Each module exports async tool functions that:
+- Take a `dict` of parameters
+- Access shared state from `state.py`
+- Return a `dict` result (JSON-serializable)
+- Handle errors gracefully with error messages in results
+
+### Extending the Server
+
+To add a new tool:
+
+1. **Create the tool function** in the appropriate module (or create a new module):
+```python
+# In src/erad/mcp/my_module.py
+from .state import state
+
+async def my_new_tool(args: dict) -> dict:
+    """Tool description."""
+    try:
+        param = args.get("param")
+        # Implementation
+        return {"result": "success", "data": result}
+    except Exception as e:
+        return {"error": str(e)}
+```
+
+2. **Register in server.py** by adding to `handle_list_tools()`:
+```python
+Tool(
+    name="my_new_tool",
+    description="Tool description",
+    inputSchema={
+        "type": "object",
+        "properties": {
+            "param": {"type": "string", "description": "Parameter"}
+        },
+        "required": ["param"]
+    }
+)
+```
+
+3. **Route in server.py** by adding to `handle_call_tool()`:
+```python
+elif name == "my_new_tool":
+    result = await my_new_tool(arguments)
+```
+
+For more details, see `src/erad/mcp/README.md`.
+
+## Tool Reference
+
+### Simulation Tools
+
+#### `load_distribution_model`
+
+Load a distribution system model from file or cache.
+
+**Parameters:**
+- `source` (string): File path or cached model name
+- `from_cache` (boolean): Load from cache (true) or file (false)
+
+**Returns:**
+- `system_id`: Asset system ID for use in other tools
+- `asset_count`: Number of assets loaded
+
+**Example:**
+```json
+{
+  "source": "/path/to/model.json",
+  "from_cache": false
+}
+```
+
+#### `create_hazard_system`
+
+Create a new empty hazard system.
+
+**Returns:**
+- `system_id`: Hazard system ID
+
+#### `load_historic_hurricane`
+
+Load a historic hurricane from the database.
+
+**Parameters:**
+- `hazard_system_id` (string): Hazard system to add to
+- `hurricane_sid` (string): Hurricane SID (e.g., "2017228N14314")
+
+**Example:**
+```json
+{
+  "hazard_system_id": "e5f6g7h8",
+  "hurricane_sid": "2017228N14314"
+}
+```
+
+#### `run_simulation`
+
+Run a hazard simulation.
+
+**Parameters:**
+- `asset_system_id` (string): Asset system ID
+- `hazard_system_id` (string): Hazard system ID
+- `curve_set` (string, optional): Fragility curve set name (default: "DEFAULT_CURVES")
+
+**Returns:**
+- `simulation_id`: Simulation result ID
+- `timesteps`: Number of simulation timesteps
+- `timestamps`: List of simulation timestamps
+
+#### `generate_scenarios`
+
+Generate Monte Carlo failure scenarios.
+
+**Parameters:**
+- `simulation_id` (string): Completed simulation ID
+- `num_samples` (integer, optional): Number of scenarios (default: 1)
+- `seed` (integer, optional): Random seed (default: 0)
+
+**Returns:**
+- `num_samples`: Number generated
+- `total_tracked_changes`: Total tracked changes
+- `scenarios`: Dictionary of scenario summaries
+
+### Asset Query Tools
+
+#### `query_assets`
+
+Query and filter assets from a loaded system.
+
+**Parameters:**
+- `asset_system_id` (string): Asset system ID
+- `asset_type` (string, optional): Filter by type
+- `min_survival_probability` (number, optional): Min survival threshold
+- `max_survival_probability` (number, optional): Max survival threshold
+- `latitude_min`, `latitude_max` (number, optional): Latitude bounds
+- `longitude_min`, `longitude_max` (number, optional): Longitude bounds
+
+**Returns:**
+- `filtered_count`: Number of matching assets
+- `assets`: List of asset details
+
+#### `get_asset_details`
+
+Get detailed information about a specific asset.
+
+**Parameters:**
+- `asset_system_id` (string): Asset system ID
+- `asset_name` (string): Asset name
+
+#### `get_asset_statistics`
+
+Calculate statistics about assets.
+
+**Parameters:**
+- `asset_system_id` (string): Asset system ID
+
+**Returns:**
+- `statistics`: Object with counts, survival probability stats
+
+#### `get_network_topology`
+
+Get network topology as node/edge lists.
+
+**Parameters:**
+- `asset_system_id` (string): Asset system ID
+
+**Returns:**
+- `node_count`, `edge_count`: Topology size
+- `nodes`, `edges`: Graph structure
+
+### Historic Hazard Tools
+
+#### `list_historic_hurricanes`
+
+List available hurricanes from database.
+
+**Parameters:**
+- `year` (integer, optional): Filter by year
+- `limit` (integer, optional): Max results (default: 50)
+
+**Returns:**
+- `hurricanes`: List with `sid`, `name`, `season`
+
+#### `list_historic_earthquakes`
+
+List available earthquakes.
+
+**Parameters:**
+- `min_magnitude` (number, optional): Minimum magnitude
+- `limit` (integer, optional): Max results (default: 50)
+
+**Returns:**
+- `earthquakes`: List with `earthquake_code`, `date`, `magnitude`, location
+
+#### `list_historic_wildfires`
+
+List available wildfires.
+
+**Parameters:**
+- `year` (integer, optional): Filter by year
+- `limit` (integer, optional): Max results (default: 50)
+
+**Returns:**
+- `wildfires`: List with `fire_name`, `fire_year`
+
+#### `load_historic_earthquake`
+
+Load a historic earthquake.
+
+**Parameters:**
+- `hazard_system_id` (string): Hazard system ID
+- `earthquake_code` (string): Earthquake code (e.g., "ISCGEM851547")
+
+#### `load_historic_wildfire`
+
+Load a historic wildfire.
+
+**Parameters:**
+- `hazard_system_id` (string): Hazard system ID
+- `wildfire_name` (string): Fire name (e.g., "GREAT LAKES FIRE")
+
+### Fragility Curve Tools
+
+#### `list_fragility_curves`
+
+List available fragility curve sets and hazard types.
+
+**Returns:**
+- `curve_sets`: List of curve set names
+- `hazard_types`: Dictionary of hazard types with asset coverage
+
+#### `get_fragility_curve_parameters`
+
+Get fragility curve parameters for specific asset/hazard combination.
+
+**Parameters:**
+- `hazard_type` (string): Hazard parameter (e.g., "wind_speed", "flood_depth")
+- `asset_type` (string): Asset type
+
+**Returns:**
+- `curves`: List of matching curves with distribution and parameters
+
+### Export Tools
+
+#### `export_to_sqlite`
+
+Export simulation results to SQLite database.
+
+**Parameters:**
+- `asset_system_id` (string): Asset system with results
+- `output_path` (string): Output file path
+
+#### `export_to_json`
+
+Export asset or hazard system to JSON.
+
+**Parameters:**
+- `system_id` (string): System ID to export
+- `system_type` (string): "asset" or "hazard"
+- `output_path` (string): Output file path
+
+#### `export_tracked_changes`
+
+Export Monte Carlo scenario tracked changes.
+
+**Parameters:**
+- `simulation_id` (string): Simulation with tracked changes
+- `output_path` (string): Output file path
+
+### Cache Management Tools
+
+#### `list_cached_models`
+
+List all cached distribution and hazard models.
+
+**Parameters:**
+- `model_type` (string, optional): "distribution", "hazard", or "both" (default: "both")
+
+**Returns:**
+- `distribution_models`, `hazard_models`: Lists with name, filename, description
+
+#### `get_cache_info`
+
+Get cache directory paths and usage statistics.
+
+**Returns:**
+- `distribution_cache`, `hazard_cache`: Objects with directory, model count, size
+
+### Documentation Tools
+
+#### `search_documentation`
+
+Search ERAD documentation for topics.
+
+**Parameters:**
+- `query` (string): Search query
+
+**Returns:**
+- `results`: List of matching files with snippets
+
+### Utility Tools
+
+#### `list_asset_types`
+
+List all available asset types in ERAD.
+
+**Returns:**
+- `asset_types`: List of asset type strings
+
+#### `list_loaded_systems`
+
+List all currently loaded systems in memory.
+
+**Returns:**
+- `asset_systems`, `hazard_systems`, `simulations`: Currently loaded items
+
+#### `clear_system`
+
+Remove a system from memory.
+
+**Parameters:**
+- `system_id` (string): System ID to remove
+- `system_type` (string): "asset", "hazard", or "simulation"
+
+## MCP Resources
+
+The server also exposes resources for direct access:
+
+- `erad://docs/{path}` - Documentation files
+- `erad://cached-model/{name}` - Cached distribution models
+- `erad://asset-system/{id}` - Loaded asset systems
+
+## Workflow Examples
+
+### Example 1: Basic Simulation
+
+```
+1. list_cached_models → See available models
+2. load_distribution_model(from_cache=true, source="my_model")
+   → Returns asset_system_id: "abc123"
+3. create_hazard_system → Returns hazard_system_id: "def456"
+4. list_historic_hurricanes(year=2017)
+5. load_historic_hurricane(hazard_system_id="def456", hurricane_sid="2017228N14314")
+6. run_simulation(asset_system_id="abc123", hazard_system_id="def456")
+   → Returns simulation_id: "ghi789"
+7. get_asset_statistics(asset_system_id="abc123") → See impact
+8. export_to_sqlite(asset_system_id="abc123", output_path="results.db")
+```
+
+### Example 2: Monte Carlo Analysis
+
+```
+1. Load model and run simulation (steps 1-6 from Example 1)
+2. generate_scenarios(simulation_id="ghi789", num_samples=100, seed=42)
+   → Get scenario summaries
+3. export_tracked_changes(simulation_id="ghi789", output_path="scenarios.json")
+4. query_assets(asset_system_id="abc123", max_survival_probability=0.5)
+   → Find most vulnerable assets
+```
+
+### Example 3: Multi-Hazard Analysis
+
+```
+1. load_distribution_model
+2. create_hazard_system → hazard_id_1
+3. load_historic_hurricane(hazard_id_1, sid="...")
+4. run_simulation → simulation_id_1
+5. create_hazard_system → hazard_id_2
+6. load_historic_earthquake(hazard_id_2, code="...")
+7. run_simulation → simulation_id_2
+8. Compare results using query_assets and statistics
+```
+
+## Troubleshooting
+
+### Database Not Found
+
+If historic hazard queries fail:
+- The database auto-downloads on first use (~500MB)
+- Check `~/.cache/erad/erad_data.sqlite` exists
+- Manually download from: `https://storage.googleapis.com/erad_v2_dataset/erad_data.sqlite`
+
+### Out of Memory
+
+For large models:
+- Use `clear_system` to remove unused systems
+- Process assets in batches using `query_assets` filters
+- Generate fewer Monte Carlo samples
+
+### Import Errors
+
+Ensure all dependencies installed:
+```bash
+pip install "NREL-erad[dev]"
+```
+
+## Advanced Usage
+
+### Custom Fragility Curves
+
+Currently, custom curves must be added to hazard systems before simulation. Support for dynamic curve creation is planned.
+
+### Batch Operations
+
+Multiple simulations can run in parallel by creating separate hazard systems for each scenario.
+
+### Network Analysis
+
+Use `get_network_topology` with NetworkX for:
+- Shortest path analysis
+- Centrality calculations
+- Community detection
+- Critical node identification
 
 ## See Also
 
-- [REST API Documentation](rest_api.md)
-- [Data Models](data_models.md)
-- [ERAD Documentation](../intro.md)
+- [CLI Documentation](cli.md) - Command-line interface
+- [Data Models](data_models.md) - Asset and hazard model specifications
+- [API Reference](../reference/api/index.md) - Python API documentation
+- `src/erad/mcp/README.md` - Detailed module architecture and development guide

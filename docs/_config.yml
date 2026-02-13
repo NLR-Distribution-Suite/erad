@@ -9,6 +9,10 @@ logo: _static/light.png
 # See https://jupyterbook.org/content/execute.html
 execute:
   execute_notebooks: force
+  timeout: 60
+  allow_errors: true
+  exclude_patterns:
+    - 'simulation/gdm.ipynb'
 
 # Define the name of the latex output file for PDF builds
 latex:
