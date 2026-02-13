@@ -52,7 +52,6 @@ dependencies = [
     "scipy",
     "sqlmodel",
     "loguru>=0.7.0",
-    "mcp>=1.0.0",
     "typer>=0.9.0",
     "rich>=13.0.0"
 ]
@@ -60,6 +59,9 @@ dependencies = [
 
 
 [project.optional-dependencies]
+mcp = [
+    "mcp>=1.0.0",
+]
 dev = [
     "black",
     "mkdocs",

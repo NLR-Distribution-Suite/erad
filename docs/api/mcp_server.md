@@ -92,7 +92,14 @@ The diagram above illustrates the complete MCP server architecture and a typical
 The MCP server is included with ERAD. Install with MCP support:
 
 ```bash
+pip install NREL-erad[mcp]
+```
+
+Or install the base package first and add MCP later:
+
+```bash
 pip install NREL-erad
+pip install NREL-erad[mcp]
 ```
 
 ## Quick Start
