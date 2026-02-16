@@ -26,7 +26,7 @@ jobs:
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          slug: NREL-Distribution-Suites/erad
+          slug: NLR-Distribution-Suite/erad
           fail_ci_if_error: false
           verbose: true
       - name: Upload test results to Codecov

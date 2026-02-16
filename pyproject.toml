@@ -82,7 +82,7 @@ doc = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/NREL-Distribution-Suites/erad"
+Homepage = "https://github.com/NLR-Distribution-Suite/erad"
 
 [project.scripts]
 erad = "erad.cli:main"
