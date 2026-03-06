@@ -40,6 +40,6 @@ jobs:
     steps:
       - uses: davidslusser/actions_python_ruff@v1.0.3
         with:
-          src: "check src"
+          src: "src"
           pip_install_command: "pip install -e .[dev,mcp]"
           python_version: "3.11"
