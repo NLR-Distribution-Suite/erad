@@ -37,9 +37,8 @@ jobs:
       - name: Clean old builds
         run: rm -rf docs/_build
         
-      # FIX: Removed trailing slash to resolve EISDIR error
       - name: Build Jupyter Book
-        run: jb build docs
+        run: jupyter-book build docs
         
       - name: Deploy to GitHub Pages
         run: ghp-import -n -p -f docs/_build/html
