@@ -38,8 +38,11 @@ jobs:
     runs-on: ubuntu-latest
     name: "ruff"
     steps:
-      - uses: davidslusser/actions_python_ruff@v1.0.3
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
-          src: "src"
-          pip_install_command: "pip install -e .[dev,mcp]"
-          python_version: "3.11"
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install -e .[dev,mcp]
+      - name: Run ruff
+        run: ruff check src
