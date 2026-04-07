@@ -95,9 +95,10 @@ class TestSimulationTools:
         assert "error" in result
         assert "not found" in result["error"].lower()
 
-    def test_resolve_model_ref_direct_path(self):
-        path = _resolve_model_ref_to_path({"path": "/tmp/example.json"})
-        assert str(path) == "/tmp/example.json"
+    def test_resolve_model_ref_direct_path(self, tmp_path):
+        example = tmp_path / "example.json"
+        path = _resolve_model_ref_to_path({"path": str(example)})
+        assert str(path) == str(example)
 
     def test_resolve_model_ref_registry_lookup(self, tmp_path):
         db_path = tmp_path / "registry.sqlite"
@@ -113,7 +114,7 @@ class TestSimulationTools:
             )
             conn.execute(
                 "INSERT INTO models (model_id, version, stored_path) VALUES (?, ?, ?)",
-                ("erad123", 3, "/tmp/erad_v3.json"),
+                ("erad123", 3, str(tmp_path / "erad_v3.json")),
             )
 
         os.environ["DIST_STACK_MODEL_REGISTRY_DB"] = str(db_path)
@@ -122,7 +123,7 @@ class TestSimulationTools:
         finally:
             os.environ.pop("DIST_STACK_MODEL_REGISTRY_DB", None)
 
-        assert str(path) == "/tmp/erad_v3.json"
+        assert str(path) == str(tmp_path / "erad_v3.json")
 
 
 class TestAssetQueryTools:
