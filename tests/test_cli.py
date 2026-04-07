@@ -9,7 +9,7 @@ from typer.testing import CliRunner
 from erad.cli import app
 
 
-runner = CliRunner(mix_stderr=False, env={"NO_COLOR": "1"})
+runner = CliRunner(env={"NO_COLOR": "1"})
 
 
 def strip_ansi(text: str) -> str:

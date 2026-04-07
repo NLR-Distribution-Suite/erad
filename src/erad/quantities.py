@@ -29,3 +29,9 @@ class Flow(BaseQuantity):
     """Quantity representing flow."""
 
     __base_unit__ = "feet**3/second"
+
+
+class Ratio(BaseQuantity):
+    """Quantity representing a dimensionless ratio (e.g. soil saturation fraction)."""
+
+    __base_unit__ = "percent"

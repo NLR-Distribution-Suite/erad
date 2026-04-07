@@ -3,7 +3,9 @@ Simulation tools for ERAD MCP Server.
 """
 
 from datetime import datetime
+import os
 from pathlib import Path
+import sqlite3
 
 from loguru import logger
 from gdm.distribution import DistributionSystem
@@ -17,9 +19,58 @@ from .state import state
 from .helpers import get_cache_directory, load_metadata
 
 
+def _resolve_model_ref_to_path(model_ref: dict) -> Path:
+    """Resolve model_ref payload into a local file path."""
+    for key in ("stored_path", "path", "source_path"):
+        value = model_ref.get(key)
+        if isinstance(value, str) and value.strip():
+            return Path(value)
+
+    model_id = model_ref.get("model_id")
+    if not isinstance(model_id, str) or not model_id.strip():
+        raise ValueError("model_ref must include a path or model_id")
+
+    version = model_ref.get("version")
+    db_path = model_ref.get("registry_db") or os.getenv("DIST_STACK_MODEL_REGISTRY_DB")
+    if not db_path:
+        raise ValueError(
+            "model_ref requires DIST_STACK_MODEL_REGISTRY_DB (or model_ref.registry_db) "
+            "when path fields are not provided"
+        )
+
+    with sqlite3.connect(str(db_path)) as conn:
+        conn.row_factory = sqlite3.Row
+        if version is None:
+            row = conn.execute(
+                """
+                SELECT stored_path FROM models
+                WHERE model_id = ?
+                ORDER BY version DESC
+                LIMIT 1
+                """,
+                (model_id,),
+            ).fetchone()
+        else:
+            row = conn.execute(
+                """
+                SELECT stored_path FROM models
+                WHERE model_id = ? AND version = ?
+                LIMIT 1
+                """,
+                (model_id, int(version)),
+            ).fetchone()
+
+    if row is None:
+        suffix = "latest" if version is None else f"version={version}"
+        raise ValueError(f"model_ref not found for model_id={model_id}, {suffix}")
+
+    return Path(str(row["stored_path"]))
+
+
 async def load_distribution_model_tool(args: dict) -> dict:
     """Load a distribution model from file or cache."""
-    source = args["source"]
+    source = args.get("source")
+    model_ref = args.get("model_ref")
     from_cache = args.get("from_cache", False)
 
     try:
@@ -34,9 +85,15 @@ async def load_distribution_model_tool(args: dict) -> dict:
             file_path = cache_dir / metadata[source]["filename"]
         else:
             # Load from file path
-            file_path = Path(source)
+            if isinstance(model_ref, dict):
+                file_path = _resolve_model_ref_to_path(model_ref)
+            elif isinstance(source, str) and source.strip():
+                file_path = Path(source)
+            else:
+                return {"error": "Expected either source or model_ref"}
+
             if not file_path.exists():
-                return {"error": f"File not found: {source}"}
+                return {"error": f"File not found: {file_path}"}
 
         # Load the distribution system
         logger.info(f"Loading distribution model from {file_path}")
@@ -69,7 +126,14 @@ async def load_distribution_model_tool(args: dict) -> dict:
 
 async def load_hazard_model_tool(args: dict) -> dict:
     """Load a hazard model from JSON file."""
-    file_path = Path(args["file_path"])
+    model_ref = args.get("model_ref")
+    if isinstance(model_ref, dict):
+        file_path = _resolve_model_ref_to_path(model_ref)
+    else:
+        file_arg = args.get("file_path")
+        if not isinstance(file_arg, str) or not file_arg.strip():
+            return {"error": "Expected either file_path or model_ref"}
+        file_path = Path(file_arg)
 
     try:
         if not file_path.exists():

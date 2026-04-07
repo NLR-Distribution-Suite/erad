@@ -27,14 +27,39 @@ async def list_historic_hurricanes_tool(args: dict) -> dict:
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
 
-        query = "SELECT DISTINCT SID, NAME, SEASON FROM historic_hurricanes"
+        cursor.execute("PRAGMA table_info('historic_hurricanes')")
+        columns = {row[1] for row in cursor.fetchall()}
+
+        def pick_column(*candidates: str) -> str | None:
+            for candidate in candidates:
+                if candidate in columns:
+                    return candidate
+            return None
+
+        sid_col = pick_column("SID", "SID ")
+        name_col = pick_column("NAME", "NAME ")
+        season_col = pick_column("SEASON", "SEASON ", "SEASON (Year)")
+
+        if not sid_col or not name_col or not season_col:
+            conn.close()
+            return {
+                "error": (
+                    "historic_hurricanes schema is missing required columns. "
+                    f"Found columns: {sorted(columns)}"
+                )
+            }
+
+        query = (
+            f'SELECT DISTINCT "{sid_col}" AS sid, "{name_col}" AS name, '
+            f'"{season_col}" AS season FROM historic_hurricanes'
+        )
         params = []
 
         if year:
-            query += " WHERE SEASON = ?"
+            query += " WHERE season = ?"
             params.append(year)
 
-        query += " ORDER BY SEASON DESC, NAME LIMIT ?"
+        query += " ORDER BY season DESC, name LIMIT ?"
         params.append(limit)
 
         cursor.execute(query, params)
@@ -149,14 +174,21 @@ async def load_historic_hurricane_tool(args: dict) -> dict:
         hazard_system = state.hazard_systems[hazard_system_id]
 
         logger.info(f"Loading hurricane {hurricane_sid}")
-        wind_model = WindModel.from_hurricane_sid(hurricane_sid)
-        hazard_system.add_component(wind_model)
+        wind_track = WindModel.from_hurricane_sid(hurricane_sid)
+        if not wind_track:
+            return {"error": f"No hurricane track points found for {hurricane_sid}"}
+
+        for wind_model in wind_track:
+            hazard_system.add_component(wind_model)
+
+        latest = wind_track[-1]
 
         return {
             "success": True,
             "hurricane_sid": hurricane_sid,
-            "timestamp": wind_model.timestamp.isoformat(),
-            "max_wind_speed": str(wind_model.max_wind_speed),
+            "points_loaded": len(wind_track),
+            "timestamp": latest.timestamp.isoformat(),
+            "max_wind_speed": str(latest.max_wind_speed),
             "message": f"Hurricane {hurricane_sid} added to hazard system {hazard_system_id}",
         }
 

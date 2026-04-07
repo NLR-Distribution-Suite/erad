@@ -2,13 +2,17 @@
 Tests for ERAD MCP Server
 """
 
+import os
+from datetime import datetime
 import pytest
+import sqlite3
 from unittest.mock import Mock
 
 # Import from new modular structure
 from erad.mcp.state import ServerState, state
 from erad.mcp.simulation import (
     create_hazard_system_tool,
+    _resolve_model_ref_to_path,
     run_simulation_tool,
 )
 from erad.mcp.assets import (
@@ -21,6 +25,9 @@ from erad.mcp.utilities import (
 )
 from erad.mcp.cache import get_cache_info_tool
 from erad.mcp.fragility import list_fragility_curves_tool
+from erad.mcp.hazards import list_historic_hurricanes_tool
+from erad.mcp.hazards import load_historic_hurricane_tool
+from erad.models.hazard.wind import WindModel
 
 
 @pytest.fixture
@@ -88,6 +95,36 @@ class TestSimulationTools:
         assert "error" in result
         assert "not found" in result["error"].lower()
 
+    def test_resolve_model_ref_direct_path(self, tmp_path):
+        example = tmp_path / "example.json"
+        path = _resolve_model_ref_to_path({"path": str(example)})
+        assert str(path) == str(example)
+
+    def test_resolve_model_ref_registry_lookup(self, tmp_path):
+        db_path = tmp_path / "registry.sqlite"
+        with sqlite3.connect(db_path) as conn:
+            conn.execute(
+                """
+                CREATE TABLE models (
+                    model_id TEXT NOT NULL,
+                    version INTEGER NOT NULL,
+                    stored_path TEXT NOT NULL
+                )
+                """
+            )
+            conn.execute(
+                "INSERT INTO models (model_id, version, stored_path) VALUES (?, ?, ?)",
+                ("erad123", 3, str(tmp_path / "erad_v3.json")),
+            )
+
+        os.environ["DIST_STACK_MODEL_REGISTRY_DB"] = str(db_path)
+        try:
+            path = _resolve_model_ref_to_path({"model_id": "erad123", "version": 3})
+        finally:
+            os.environ.pop("DIST_STACK_MODEL_REGISTRY_DB", None)
+
+        assert str(path) == str(tmp_path / "erad_v3.json")
+
 
 class TestAssetQueryTools:
     """Test asset query tools."""
@@ -150,6 +187,86 @@ class TestUtilityTools:
         assert "curve_sets" in result
         assert "DEFAULT_CURVES" in result["curve_sets"]
         assert "hazard_types" in result
+
+    @pytest.mark.asyncio
+    async def test_list_historic_hurricanes_legacy_schema(self, tmp_path, monkeypatch):
+        """Historic hurricane listing should work with legacy IBTrACS-style column names."""
+        db_path = tmp_path / "erad_data.sqlite"
+        with sqlite3.connect(db_path) as conn:
+            conn.execute(
+                'CREATE TABLE historic_hurricanes ("SID " TEXT, "NAME " TEXT, "SEASON (Year)" INTEGER)'
+            )
+            conn.execute(
+                'INSERT INTO historic_hurricanes ("SID ", "NAME ", "SEASON (Year)") VALUES (?, ?, ?)',
+                ("2025053S15150", "ALFRED", 2025),
+            )
+
+        monkeypatch.setattr("erad.mcp.hazards.get_historic_hazard_db", lambda: db_path)
+
+        result = await list_historic_hurricanes_tool({"year": 2025, "limit": 10})
+
+        assert result["success"] is True
+        assert result["count"] == 1
+        assert result["hurricanes"][0]["sid"] == "2025053S15150"
+        assert result["hurricanes"][0]["name"] == "ALFRED"
+        assert result["hurricanes"][0]["season"] == 2025
+
+    def test_wind_model_from_hurricane_sid_legacy_schema(self, tmp_path, monkeypatch):
+        """WindModel loading should handle legacy IBTrACS-style column names."""
+        db_path = tmp_path / "erad_data.sqlite"
+        with sqlite3.connect(db_path) as conn:
+            conn.execute(
+                """
+                CREATE TABLE historic_hurricanes (
+                    "SID " TEXT,
+                    "LAT (degrees_north)" REAL,
+                    "LON (degrees_east)" REAL,
+                    "USA_WIND (kts)" TEXT,
+                    "USA_ROCI (nmile)" TEXT,
+                    "USA_RMW (nmile)" TEXT,
+                    "USA_POCI (mb)" TEXT,
+                    "ISO_TIME " TEXT
+                )
+                """
+            )
+            conn.execute(
+                'INSERT INTO historic_hurricanes ("SID ", "LAT (degrees_north)", '
+                '"LON (degrees_east)", "USA_WIND (kts)", "USA_ROCI (nmile)", '
+                '"USA_RMW (nmile)", "USA_POCI (mb)", "ISO_TIME ") '
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                ("TESTSID", 10.0, -20.0, "75", "120", "20", "980", "2025-01-01 00:00:00"),
+            )
+
+        monkeypatch.setattr("erad.models.hazard.wind.ERAD_DB", db_path)
+
+        track = WindModel.from_hurricane_sid("TESTSID")
+
+        assert len(track) == 1
+        assert track[0].name == "TESTSID"
+
+    @pytest.mark.asyncio
+    async def test_load_historic_hurricane_adds_track_points(self, clean_state, monkeypatch):
+        """Historic hurricane load should add each track point to the hazard system."""
+
+        class _WindPoint:
+            def __init__(self, hour: int):
+                self.timestamp = datetime(2025, 1, 1, hour, 0, 0)
+                self.max_wind_speed = f"{70 + hour} knots"
+
+        hazard_system = Mock()
+        state.hazard_systems["hz1"] = hazard_system
+        monkeypatch.setattr(
+            "erad.mcp.hazards.WindModel.from_hurricane_sid",
+            lambda _sid: [_WindPoint(0), _WindPoint(1)],
+        )
+
+        result = await load_historic_hurricane_tool(
+            {"hazard_system_id": "hz1", "hurricane_sid": "2017106N36310"}
+        )
+
+        assert result["success"] is True
+        assert result["points_loaded"] == 2
+        assert hazard_system.add_component.call_count == 2
 
 
 class TestFragilityCurveTools:

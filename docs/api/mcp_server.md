@@ -100,6 +100,51 @@ create_hazard_system → hazard_system_id: "e5f6g7h8"
 run_simulation(a1b2c3d4, e5f6g7h8) → simulation_id: "i9j0k1l2"
 ```
 
+## model_ref Interoperability
+
+Model-loading tools support both legacy path inputs and `model_ref`:
+
+- `load_distribution_model`: `source` or `model_ref`
+- `load_hazard_model`: `file_path` or `model_ref`
+
+### model_ref shape
+
+```json
+{
+  "model_id": "abc123def456",
+  "version": 2
+}
+```
+
+Direct path-carrying references are also valid:
+
+```json
+{
+  "stored_path": "/abs/path/to/model.json"
+}
+```
+
+### Resolution order
+
+1. `stored_path`
+2. `path`
+3. `source_path`
+4. Registry lookup by `model_id` / `version`
+
+Registry lookup uses `model_ref.registry_db` first, then
+`DIST_STACK_MODEL_REGISTRY_DB`.
+
+### Example payload
+
+```json
+{
+  "model_ref": {
+    "model_id": "abc123def456",
+    "version": 2
+  }
+}
+```
+
 ## Architecture
 
 The MCP server is built with a modular architecture for maintainability and extensibility. The implementation is organized into focused modules:

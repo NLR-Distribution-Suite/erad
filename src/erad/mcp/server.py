@@ -84,13 +84,16 @@ async def handle_list_tools() -> list[Tool]:
                 "type": "object",
                 "properties": {
                     "source": {"type": "string", "description": "File path or cached model name"},
+                    "model_ref": {
+                        "type": "object",
+                        "description": "Optional model reference ({model_id/version} or direct stored_path/path)",
+                    },
                     "from_cache": {
                         "type": "boolean",
                         "description": "Whether to load from cache (true) or file path (false)",
                         "default": False,
                     },
                 },
-                "required": ["source"],
             },
         ),
         Tool(
@@ -102,9 +105,12 @@ async def handle_list_tools() -> list[Tool]:
                     "file_path": {
                         "type": "string",
                         "description": "Path to hazard model JSON file",
-                    }
+                    },
+                    "model_ref": {
+                        "type": "object",
+                        "description": "Optional model reference ({model_id/version} or direct stored_path/path)",
+                    },
                 },
-                "required": ["file_path"],
             },
         ),
         Tool(
