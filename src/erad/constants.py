@@ -34,12 +34,13 @@ DEFAULT_HEIGHTS_M = {
     AssetTypes.transmission_tower: 0.0,
     AssetTypes.distribution_poles: 0.0,
     AssetTypes.transmission_overhead_lines: 30.0,
-    AssetTypes.distribution_overhead_lines: 0.0,
+    AssetTypes.distribution_overhead_lines: 10.0,
     AssetTypes.transformer_mad_mount: 0.3,
     AssetTypes.transformer_pole_mount: 4.0,
     AssetTypes.transmission_junction_box: -1.0,
     AssetTypes.distribution_junction_box: -1.0,
     AssetTypes.switch: 4.0,
+    AssetTypes.series_reactor: 0.0,
 }
 
 ASSET_TYPES = (

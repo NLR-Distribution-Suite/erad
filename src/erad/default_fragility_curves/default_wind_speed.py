@@ -55,6 +55,12 @@ DEFAULT_WIND_SPEED_FRAGILITY_CURVES = frag.HazardFragilityCurves(
             ),
         ),
         frag.FragilityCurve(
+            asset_type=AssetTypes.series_reactor,
+            prob_function=frag.ProbabilityFunction(
+                distribution="lognorm", parameters=[Speed(0.4, "m/s"), Speed(55, "m/s"), 1 / 0.40]
+            ),
+        ),
+        frag.FragilityCurve(
             asset_type=AssetTypes.transformer_mad_mount,
             prob_function=frag.ProbabilityFunction(
                 distribution="lognorm", parameters=[Speed(0.35, "m/s"), Speed(50, "m/s"), 1 / 0.35]

@@ -31,6 +31,11 @@ asset_to_gdm_mapping = {
             component_type=gdc.DistributionBattery,
         ),
     ],
+    AssetTypes.series_reactor: [
+        ComponentFilterModel(
+            component_type=gdc.DistributionReactor,
+        ),
+    ],
     AssetTypes.distribution_underground_cables: [
         ComponentFilterModel(
             component_type=gdc.GeometryBranch,

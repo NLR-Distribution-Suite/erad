@@ -54,6 +54,12 @@ DEFAULT_PEAK_GROUND_VELOCITY_FRAGILITY_CURVES = frag.HazardFragilityCurves(
             ),
         ),
         frag.FragilityCurve(
+            asset_type=AssetTypes.series_reactor,
+            prob_function=frag.ProbabilityFunction(
+                distribution="lognorm", parameters=[Speed(0.5, "cm/s"), Speed(50, "cm/s"), 2]
+            ),
+        ),
+        frag.FragilityCurve(
             asset_type=AssetTypes.transformer_mad_mount,
             prob_function=frag.ProbabilityFunction(
                 distribution="lognorm", parameters=[Speed(0.5, "cm/s"), Speed(35, "cm/s"), 2]
