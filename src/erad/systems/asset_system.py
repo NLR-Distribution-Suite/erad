@@ -7,6 +7,7 @@ from gdm.distribution import DistributionSystem
 from shapely.geometry import Point, LineString
 import gdm.distribution.components as gdc
 from gdm.quantities import Distance
+from gdm.systems.substation.components import PowerTransformer
 import plotly.graph_objects as go
 from infrasys import System
 from loguru import logger
@@ -344,6 +345,9 @@ class AssetSystem(System):
         dist_system: DistributionSystem,
     ):
         for transformer in dist_system.get_components(gdc.DistributionTransformerBase):
+            if isinstance(transformer, PowerTransformer):
+                asset_dict[AssetTypes.substation].append(transformer)
+                continue
             bus_types = [
                 AssetSystem._get_bus_type(b, asset_dict, dist_system) for b in transformer.buses
             ]

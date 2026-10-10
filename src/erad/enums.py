@@ -30,6 +30,7 @@ class AssetTypes(IntEnum):
     transmission_junction_box = 11
     distribution_junction_box = 12
     switch = 13
+    series_reactor = 14
 
     @classmethod
     def has_value(cls, value):
