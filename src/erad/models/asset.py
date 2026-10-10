@@ -6,6 +6,7 @@ from pydantic import computed_field, Field
 from infrasys.quantities import Distance
 from geopy.distance import geodesic
 from shapely.geometry import Point
+from shapely.ops import nearest_points
 from pyhigh import get_elevation
 from infrasys import Component
 from loguru import logger
@@ -92,10 +93,17 @@ class AssetState(Component):
         distances_to_wild_fire_boundaries = []
         for wild_fire_area in hazard_model.affected_areas:
             if wild_fire_area.affected_area.contains(asset_coordinate):
-                distance = 0
+                distance_km = 0.0
             else:
-                distance = wild_fire_area.affected_area.exterior.distance(asset_coordinate)
-            distances_to_wild_fire_boundaries.append(distance)
+                nearest_boundary_point = nearest_points(
+                    asset_coordinate,
+                    wild_fire_area.affected_area.boundary,
+                )[1]
+                distance_km = geodesic(
+                    (asset_coordinate.y, asset_coordinate.x),
+                    (nearest_boundary_point.y, nearest_boundary_point.x),
+                ).km
+            distances_to_wild_fire_boundaries.append(distance_km)
         minimum_distance_km = min(distances_to_wild_fire_boundaries)
         self.fire_boundary_dist = DistanceProbability(
             distance=Distance(minimum_distance_km, "kilometer"),
