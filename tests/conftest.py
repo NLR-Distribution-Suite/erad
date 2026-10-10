@@ -1,25 +1,24 @@
-from gdmloader.constants import GCS_CASE_SOURCE
+from infrasys import Location
 from gdm.distribution import DistributionSystem
-from gdmloader.source import SystemLoader
+from gdm.distribution.components import DistributionReactor, DistributionVoltageSource
 
 import pytest
 
 
+def _example_gdm_system():
+    system = DistributionSystem(auto_add_composed_components=True)
+    reactor = DistributionReactor.example()
+    reactor.buses[0].coordinate = Location(x=20.0, y=30.0)
+    reactor.buses[1].coordinate = Location(x=20.01, y=30.01)
+    system.add_components(DistributionVoltageSource.example(), reactor)
+    return system
+
+
 @pytest.fixture(scope="session")
 def gdm_system():
-    loader = SystemLoader()
-    loader.add_source(GCS_CASE_SOURCE)
-    return loader.load_dataset(
-        system_type=DistributionSystem, source_name=GCS_CASE_SOURCE.name, dataset_name="p5r"
-    )
+    return _example_gdm_system()
 
 
 @pytest.fixture(scope="session")
 def gdm_system_2():
-    loader = SystemLoader()
-    loader.add_source(GCS_CASE_SOURCE)
-    return loader.load_dataset(
-        system_type=DistributionSystem,
-        source_name=GCS_CASE_SOURCE.name,
-        dataset_name="p1rhs7_1247",
-    )
+    return _example_gdm_system()
