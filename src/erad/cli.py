@@ -65,7 +65,7 @@ def _load_cached_systems(
     update_status: Optional[Callable[[str], None]] = None,
 ):
     """Load cached distribution/hazard systems and construct runtime ERAD systems."""
-    from gdm.distribution import DistributionSystem
+    from gdm.systems.distribution import DistributionSystem
     from erad.systems import AssetSystem, HazardSystem
 
     dist_models = load_cached_models()

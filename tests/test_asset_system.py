@@ -3,7 +3,7 @@ from unittest.mock import Mock
 
 from infrasys import Component
 
-from gdm.distribution import DistributionSystem
+from gdm.systems.distribution import DistributionSystem
 from gdm.systems.substation.components import PowerTransformer
 import pytest
 
@@ -11,7 +11,7 @@ from erad.systems.asset_system import AssetSystem
 from erad.constants import ASSET_TYPES
 from erad.enums import AssetTypes
 from erad.gdm_mapping import asset_to_gdm_mapping
-from gdm.distribution.components import DistributionReactor
+from gdm.systems.distribution.components import DistributionReactor
 
 
 def test_component_addition():

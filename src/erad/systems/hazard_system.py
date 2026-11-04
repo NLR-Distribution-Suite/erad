@@ -1,6 +1,6 @@
 from infrasys import System
 
-from gdm.distribution.enums import PlotingStyle, MapType
+from gdm.systems.distribution.enums import PlotingStyle, MapType
 import plotly.graph_objects as go
 
 from erad.default_fragility_curves import DEFAULT_FRAGILTY_CURVES

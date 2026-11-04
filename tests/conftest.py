@@ -1,6 +1,6 @@
 from infrasys import Location
-from gdm.distribution import DistributionSystem
-from gdm.distribution.components import (
+from gdm.systems.distribution import DistributionSystem
+from gdm.systems.distribution.components import (
     DistributionBus,
     DistributionReactor,
     DistributionVoltageSource,

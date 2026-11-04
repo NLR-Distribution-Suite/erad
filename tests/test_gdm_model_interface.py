@@ -1,7 +1,7 @@
 from datetime import datetime
 
-from gdm.distribution.components import DistributionBus
-from gdm.distribution import DistributionSystem
+from gdm.systems.distribution.components import DistributionBus
+from gdm.systems.distribution import DistributionSystem
 from gdm.quantities import Distance
 from shapely.geometry import Point
 
