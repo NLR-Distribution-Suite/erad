@@ -80,7 +80,7 @@ doc = [
   "myst-parser",
   "autodoc_pydantic",
   "sphinxcontrib-mermaid",
-  "jupyter-book==2.1.6",
+  "jupyter-book==2.1.7",
 ]
 
 [project.urls]
