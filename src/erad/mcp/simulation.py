@@ -8,7 +8,7 @@ from pathlib import Path
 import sqlite3
 
 from loguru import logger
-from gdm.distribution import DistributionSystem
+from gdm.systems.distribution import DistributionSystem
 
 from erad.runner import HazardSimulator, HazardScenarioGenerator
 from erad.systems.asset_system import AssetSystem

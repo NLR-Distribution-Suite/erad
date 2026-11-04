@@ -1,5 +1,5 @@
-import gdm.distribution.components as gdc
-import gdm.distribution.equipment as gde
+import gdm.systems.distribution.components as gdc
+import gdm.systems.distribution.equipment as gde
 
 from erad.enums import AssetTypes
 from erad.models.asset_mapping import ComponentFilterModel

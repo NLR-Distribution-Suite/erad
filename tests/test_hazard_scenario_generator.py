@@ -1,8 +1,8 @@
 from datetime import datetime
 
-from gdm.distribution.components import DistributionBus
+from gdm.systems.distribution.components import DistributionBus
 from gdm.tracked_changes import filter_tracked_changes_by_name_and_date, apply_updates_to_system
-from gdm.distribution import DistributionSystem
+from gdm.systems.distribution import DistributionSystem
 from gdm.quantities import Distance
 from shapely.geometry import Point
 

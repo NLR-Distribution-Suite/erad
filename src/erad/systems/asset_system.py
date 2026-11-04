@@ -1,11 +1,11 @@
 from collections import defaultdict, Counter
 from pathlib import Path
 
-from gdm.distribution.enums import PlotingStyle, MapType
+from gdm.systems.distribution.enums import PlotingStyle, MapType
 from sqlmodel import SQLModel, Session, create_engine
-from gdm.distribution import DistributionSystem
+from gdm.systems.distribution import DistributionSystem
 from shapely.geometry import Point, LineString
-import gdm.distribution.components as gdc
+import gdm.systems.distribution.components as gdc
 from gdm.quantities import Distance
 from gdm.systems.substation.components import PowerTransformer
 import plotly.graph_objects as go

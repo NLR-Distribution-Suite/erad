@@ -4,7 +4,7 @@ Export tools for ERAD MCP Server.
 
 import json
 
-from gdm.distribution import DistributionSystem
+from gdm.systems.distribution import DistributionSystem
 from gdm.tracked_changes import apply_updates_to_system, filter_tracked_changes_by_name_and_date
 from loguru import logger
 
